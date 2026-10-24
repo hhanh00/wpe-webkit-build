@@ -1,0 +1,55 @@
+# WPE WebKit configure options, one per line. Shared by build.sh (Ubuntu
+# tarballs) and flake.nix (Nix derivation) so both builds ship the same engine.
+# Builder-specific settings (install prefix, compiler, bwrap paths) are passed
+# by each builder, not listed here.
+-DPORT=WPE
+-DCMAKE_BUILD_TYPE=Release
+
+# Backend: the Flutter plugin drives the WPEPlatform headless backend and
+# exports frames as DMA-BUF or shared memory. DRM and Wayland platforms would
+# only add libinput, udev and wayland dependencies.
+-DENABLE_WPE_PLATFORM_HEADLESS=ON
+-DENABLE_WPE_PLATFORM_DRM=OFF
+-DENABLE_WPE_PLATFORM_WAYLAND=OFF
+
+# The legacy libwpe API is kept because upstream's Flutter plugin links libwpe
+# even on the WPEPlatform path. The FDO backend itself is not built.
+-DENABLE_WPE_LEGACY_API=ON
+-DENABLE_WPE_QT_API=OFF
+-DENABLE_MINIBROWSER=OFF
+
+# Tooling and integrations the embedder does not need. Spellcheck would pull
+# enchant and its dictionaries into the runtime closure.
+-DENABLE_WEBDRIVER=OFF
+-DENABLE_SPELLCHECK=OFF
+-DENABLE_INTROSPECTION=OFF
+-DENABLE_DOCUMENTATION=OFF
+-DENABLE_JOURNALD_LOG=OFF
+-DUSE_LIBBACKTRACE=OFF
+-DUSE_SYSPROF_CAPTURE=OFF
+-DUSE_ATK=OFF
+
+# Media stack off: no GStreamer, video, Web Audio, WebRTC or capture.
+-DUSE_GSTREAMER=OFF
+-DENABLE_VIDEO=OFF
+-DENABLE_WEB_AUDIO=OFF
+-DENABLE_MEDIA_STREAM=OFF
+-DENABLE_WEB_RTC=OFF
+-DUSE_GSTREAMER_WEBRTC=OFF
+-DENABLE_MEDIA_SOURCE=OFF
+-DENABLE_ENCRYPTED_MEDIA=OFF
+-DENABLE_SPEECH_SYNTHESIS=OFF
+-DENABLE_GAMEPAD=OFF
+-DENABLE_WEBXR=OFF
+
+# Kept: GPU process with DMA-BUF export, WebGL, image codecs. WOFF2 fonts come
+# from FreeType's built-in support, so libwoff2 is not used.
+-DUSE_GBM=ON
+-DENABLE_WEBGL=ON
+-DUSE_AVIF=ON
+-DUSE_JPEGXL=ON
+-DUSE_LCMS=ON
+
+# The web-process sandbox stays on. Each builder passes BWRAP_EXECUTABLE and
+# DBUS_PROXY_EXECUTABLE for its own layout.
+-DENABLE_BUBBLEWRAP_SANDBOX=ON

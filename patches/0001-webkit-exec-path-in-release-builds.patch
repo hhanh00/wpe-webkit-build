@@ -1,0 +1,22 @@
+--- a/Source/WebKit/Shared/glib/ProcessExecutablePathGLib.cpp
++++ b/Source/WebKit/Shared/glib/ProcessExecutablePathGLib.cpp
+@@ -44,7 +44,10 @@
+ 
+ static String findWebKitProcess(const ASCIILiteral processName)
+ {
+-#if ENABLE(DEVELOPER_MODE)
++    // Relocatable bundles: honour WEBKIT_EXEC_PATH in every build, not only
++    // with ENABLE(DEVELOPER_MODE), so an application that ships WebKit inside
++    // its bundle can point at its helper processes. The compiled-in
++    // PKGLIBEXECDIR stays the fallback.
+     static const char* execDirectory = g_getenv("WEBKIT_EXEC_PATH");
+     if (execDirectory) {
+         String processPath = FileSystem::pathByAppendingComponent(FileSystem::stringFromFileSystemRepresentation(execDirectory), processName);
+@@ -52,6 +55,7 @@
+             return processPath;
+     }
+ 
++#if ENABLE(DEVELOPER_MODE)
+     static String executablePath = getExecutablePath();
+     if (!executablePath.isNull()) {
+         String processPath = FileSystem::pathByAppendingComponent(executablePath, processName);

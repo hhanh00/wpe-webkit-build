@@ -1,0 +1,16 @@
+--- a/Source/WebKit/UIProcess/Launcher/glib/BubblewrapLauncher.cpp
++++ b/Source/WebKit/UIProcess/Launcher/glib/BubblewrapLauncher.cpp
+@@ -975,6 +975,13 @@
+         sandboxArgs.append("--unshare-ipc");
+     }
+ 
++    // Nix: the store and the system profile hold every library and the GPU
++    // drivers; bind them read-only so sandboxed processes can start.
++    sandboxArgs.appendVector(Vector<CString>({ "--ro-bind", "@storeDir@", "@storeDir@" }));
++    sandboxArgs.appendVector(Vector<CString>({ "--ro-bind-try", "/run/current-system", "/run/current-system" }));
++    sandboxArgs.appendVector(Vector<CString>({ "--ro-bind-try", "@driverLink@/lib", "@driverLink@/lib" }));
++    sandboxArgs.appendVector(Vector<CString>({ "--ro-bind-try", "@driverLink@/share", "@driverLink@/share" }));
++
+ #if ENABLE(DEVELOPER_MODE)
+     const char* execDirectory = g_getenv("WEBKIT_EXEC_PATH");
+     if (execDirectory) {

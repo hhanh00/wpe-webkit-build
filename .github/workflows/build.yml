@@ -1,0 +1,84 @@
+name: Build WPE WebKit
+
+# Manual only. A run compiles libwpe and WPE WebKit on Ubuntu 24.04 for
+# x86_64 and arm64, then publishes the tarballs on a GitHub release tagged
+# wpe-webkit-<version>-<build>. Consumers pin that tag and the checksum.
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: Build number appended to the release tag
+        required: true
+        default: "1"
+      publish:
+        description: Create the GitHub release
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Install build dependencies
+        run: ./install-deps-ubuntu.sh
+
+      - name: Build
+        run: |
+          ./build.sh --prefix /opt/wpe --out "$PWD/dist"
+          ls -la dist
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: wpe-webkit-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release metadata
+        id: meta
+        run: |
+          source versions.env
+          echo "tag=wpe-webkit-${WPE_VERSION}-${{ inputs.build }}" >> "$GITHUB_OUTPUT"
+          echo "version=${WPE_VERSION}" >> "$GITHUB_OUTPUT"
+          cat dist/*.sha256
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: WPE WebKit ${{ steps.meta.outputs.version }} build ${{ inputs.build }}
+          make_latest: false
+          body: |
+            Relocatable WPE WebKit ${{ steps.meta.outputs.version }} built from
+            commit ${{ github.sha }} with the options in `cmake-flags.txt`.
+            Checksums are in the `.sha256` files, dependency lists in the
+            `.manifest.txt` files.
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
